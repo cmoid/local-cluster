@@ -61,12 +61,12 @@ defmodule LocalCluster do
       when (is_binary(prefix) or is_atom(prefix)) and is_integer(amount) do
     nodes =
       Enum.map(1..amount, fn idx ->
-        {:ok, name} =
-          :slave.start_link(
-            ~c"127.0.0.1",
-            :"#{prefix}#{idx}",
-            ~c"-loader inet -hosts 127.0.0.1 -setcookie \"#{:erlang.get_cookie()}\""
-          )
+        {:ok, _, name} =
+          :peer.start_link(%{
+            :host => ~c"127.0.0.1",
+            :name => :"#{prefix}#{idx}",
+            :args => [~c"-loader inet -hosts 127.0.0.1 -setcookie \"#{:erlang.get_cookie()}\""]
+          })
 
         name
       end)
