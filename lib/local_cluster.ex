@@ -93,8 +93,6 @@ defmodule LocalCluster do
             |> Keyword.merge(base, fn _, v, _ -> v end)
 
           for {key, val} <- environment do
-            ## this is totally wrong Moid, need to make one separate rpc
-            ## for each node and pass it it's config
             :rpc.call(node, Application, :put_env, [app_name, key, val])
           end
         end)
