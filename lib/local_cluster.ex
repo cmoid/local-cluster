@@ -85,18 +85,22 @@ defmodule LocalCluster do
       for {app_name, _, _} <- Application.loaded_applications() do
         base = Application.get_all_env(app_name)
 
-      environment =
-        options
-        |> Keyword.get(:environment, [])
-        |> Keyword.get(app_name, [])
-        |> Keyword.merge(base, fn _, v, _ -> v end)
+        Enum.with_index(nodes, fn node, idx ->
+          environment =
+            options
+            |> Keyword.get(:environment, [])
+            |> build_app_env(idx, app_name)
+            |> Keyword.merge(base, fn _, v, _ -> v end)
 
-      for { key, val } <- environment do
-        rpc.(Application, :put_env, [ app_name, key, val ])
+          for {key, val} <- environment do
+            ## this is totally wrong Moid, need to make one separate rpc
+            ## for each node and pass it it's config
+            :rpc.call(node, Application, :put_env, [app_name, key, val])
+          end
+        end)
+
+        app_name
       end
-
-      app_name
-    end
 
     ordered_apps = Keyword.get(options, :applications, loaded_apps)
 
@@ -124,4 +128,13 @@ defmodule LocalCluster do
   @spec stop :: :ok | {:error, atom}
   def stop,
     do: :net_kernel.stop()
+
+  defp build_app_env(opts, idx, app_name) do
+    app_env = Keyword.get(opts, app_name, [])
+
+    case is_function(app_env) do
+      true -> app_env.(idx)
+      false -> app_env
+    end
+  end
 end
